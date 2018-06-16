@@ -3,18 +3,7 @@ import math
 import requests
 import re
 
-class RunReport(object):   
-    resultsSystemText = ''
-    currentEventVolunteers = []
-    currentEventRunners = {}
-    photos = []
-    
-    toc = []
-    runCount = []
-    
-    runners = {}
-    volunteers = {}
-    
+class RunReportTemplates:
     VOLUNTEER_START_TEXT = 'We are very grateful to the volunteers who made this event happen:'
     PB_TEXT = 'New PB!'
     
@@ -35,6 +24,11 @@ class RunReport(object):
 <th style="width: 50%; text-align: center; border: 1px solid #ccc !important;">Volunteers ({} or more from last {} events)</th>
 </tr>
 '''
+
+    tableHeaderTemplate =  '<tr><th style="width: {}%; text-align: center; border: 1px solid #ccc !important;">{}</th></tr>'
+
+    tableHeaderCellSummaryTemplate = '{} ({} or more from last {} events)'
+
     tableCell = '''<td style="padding-left: 10px; border-width: 0 0 1px 0 !important; border-style: solid  !important; border-color: #ccc !important;">
 {}</td>
 '''
@@ -42,7 +36,29 @@ class RunReport(object):
     photoTemplate = '<img src="{}" alt="{}" width="{}" height="{}" />'
     
     tableEnd = '</tbody></table>' 
+
+	
+class RunReport(object):   
+    resultsSystemText = ''
+    templates = False
+    currentEventVolunteers = []
+    currentEventRunners = {}
+    photos = []
     
+    toc = []
+    runCount = []
+    
+    runners = {}
+    volunteers = {}
+    
+    VOLUNTEER_START_TEXT = 'We are very grateful to the volunteers who made this event happen:'
+    PB_TEXT = 'New PB!'  
+
+	
+    def __init__(self):
+        self.templates = RunReportTemplates()
+    
+	
     def setResultsSystem(self, text):
         text = text.strip()
         if text == '':
@@ -96,14 +112,14 @@ class RunReport(object):
         
     def getSectionHeading(self, anchor, heading):
         self.addTOC(anchor, heading)
-        return self.sectionHeadingTemplate.format(anchor, heading)
+        return self.templates.sectionHeadingTemplate.format(anchor, heading)
     
     
     def getSectionContent(self, content):
-        return self.sectionContentTemplate.format(content)
+        return self.templates.sectionContentTemplate.format(content)
     
     def getSectionSeparator(self):
-        return self.separator
+        return self.templates.separator
     
     
     def getCurrentEventVolunteerHTML(self):
@@ -203,7 +219,7 @@ class RunReport(object):
                 elif int(dims[1]) == 640:
                     dims[1] = 620
                     dims[0] = math.floor(620 * int(dims[0]) / 640)
-                html += self.photoTemplate.format(p['link'],p['type'],dims[0],dims[1])
+                html += self.templates.photoTemplate.format(p['link'],p['type'],dims[0],dims[1])
         
         return html
         
@@ -221,6 +237,28 @@ class RunReport(object):
         
         html = self.getSectionContent(html)
         return html
+		
+    def getPBSummary(self, pbLimit=2):
+        events = len(self.runCount)
+        regularPbs = {k:v for k,v in self.runners.items() if v['pbCount'] >= pbLimit}	
+      
+        header = []
+        header.append(self.templates.tableHeaderCellSummaryTemplate.format('PBs', pbLimit, events))
+		
+        html = self.templates.tableStart 
+        html += self.templates.tableHeaderTemplate.format(100, header)
+        for l,v in regularPbs: 
+            html += '<tr>'+self.templates.tableCell.format(v['name'])+'</tr>'
+
+        html += self.templates.tableEnd
+		
+        return html
+	
+	
+    def getAgeGroupFinisher(self):
+        html = ''
+		
+        return html	
         
     def getRegularSummary(self, runnerLimit, volunteerLimit):
         events = len(self.runCount)
@@ -229,9 +267,13 @@ class RunReport(object):
         
         regularVolunteer = {k:v for k,v in self.volunteers.items() if v >= volunteerLimit}
         volunteerList = sorted(regularVolunteer.items(), key=lambda x: x[0])
-        
-        text = ''     
-        text += self.tableStart + self.tableHeader.format(runnerLimit, events, volunteerLimit, events)
+                 
+        header = []
+        header.append(self.templates.tableHeaderCellSummaryTemplate.format('Runners', runnerLimit, events))
+        header.append(self.templates.tableHeaderCellSummaryTemplate.format('Volunteers', volunteerLimit, events))
+		
+        html = self.templates.tableStart
+        html += self.templates.tableHeader.format(runnerLimit, events, volunteerLimit, events)
         
         # work out a better way of transposing two arrays of diff lengths
         rows = {} 
@@ -239,43 +281,44 @@ class RunReport(object):
         count = 1
         for l,v in runnersList: 
             rows[count] = []
-            rows[count].append(self.tableCell.format(v['name']))
+            rows[count].append(self.templates.tableCell.format(v['name']))
             count = count + 1
           
         count = 1
         for key,value in volunteerList: 
-            rows[count].append(self.tableCell.format(key))
+            rows[count].append(self.templates.tableCell.format(key))
             count = count + 1 
             
         for key,value in rows.items():
-            text += '<tr>'
+            html += '<tr>'
             for r in value:
-                text += r
+                html += r
                 if len(value) == 1:
-                    text += self.tableCell.format('')
-            text += "</tr>\n"
+                    html += self.templates.tableCell.format('')
+            html += "</tr>\n"
             
-        text += self.tableEnd
+        html += self.templates.tableEnd
         
-        return text;
+        return html;
 
 class RunReportWeek(RunReport):
     
     runReportHTML = ''
-    
-    def createWeek(self, weekNumber):
+	
+	
+    def createWeek(self, week, options):
         self.addSummarySection()
         self.addUpcomingSection()
         self.addVolunteerSection()
         
-        if weekNumber == 1:
-            self.addWeek1Section()
-        elif weekNumber == 2:   
-            self.addWeek2Section()
-        elif weekNumber == 3:  
-            self.addWeek3Section()
-        elif weekNumber == 4:  
-            self.addWeek4Section()
+        if week == 1:
+            self.addAgeGroupSection()
+        elif week == 2:   
+            self.addRegularSection(options['runnerLimit'],options['volunteerLimit'])
+        elif week == 3:  
+            self.addWeekPBSection(options['pbLimit'])
+        elif week == 4:  
+            self.addCommunitySection()
             
         self.addTimesSection()
         self.addPhotoSection()
@@ -326,22 +369,22 @@ if you can help. The wonderful volunteers who made this event possible are:
         html += self.getSectionSeparator()
         self.runReportHTML += html
     
-    def addWeek1Section(self):
+    def addAgeGroupSection(self):
         html = self.getSectionHeading('agegroup','Age Group First Finishers')
         html += self.getAgeGroupFinisher()
         self.runReportHTML += html  
         
-    def addWeek2Section(self):
+    def addRegularSection(self, runnerLimit=7, volunteerLimit=2):
         html = self.getSectionHeading('regular','Regular Runners / Volunteers')
-        html += self.getRegularSummary(7,2)
+        html += self.getRegularSummary(runnerLimit,volunteerLimit)
         self.runReportHTML += html  
         
-    def addWeek3Section(self):
+    def addWeekPBSection(self, pbLimit=2):
         html = self.getSectionHeading('pbs','Regular PBs')
-        html += self.getPBs()
+        html += self.getPBSummary(pbLimit)
         self.runReportHTML += html
             
-    def addWeek4Section(self):
+    def addCommunitySection(self):
         html = self.getSectionHeading('fun','Having Fun')
         self.runReportHTML += html
         
