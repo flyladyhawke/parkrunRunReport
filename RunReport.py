@@ -36,6 +36,12 @@ class RunReportTemplates:
     photoTemplate = '<img src="{}" alt="{}" width="{}" height="{}" />'
     
     tableEnd = '</tbody></table>' 
+	
+    volunteerText = '''
+Jells parkrun relies on volunteers to bring you a free, timed event each week. We encourage everyone to volunteer because it's fun, rewarding, and giving to your community. 
+Please review the <a href="https://www.parkrun.com.au/jells/volunteer/futureroster/">Future Roster</a> to see where volunteers are needed and email <a href="mailto:jellshelpers@parkrun.com">jellshelpers@parkrun.com</a> 
+if you can help. The wonderful volunteers who made this event possible are:
+'''
 
 	
 class RunReport(object):   
@@ -146,7 +152,7 @@ class RunReport(object):
         # </tr>
         cell = cells[1]
         pb = 0
-        if cells[8] == self.PB_TEXT:
+        if cells[8].get_text() == self.PB_TEXT:
             pb = 1
         name = cell.get_text()
         time = cells[2].get_text()
@@ -240,14 +246,15 @@ class RunReport(object):
 		
     def getPBSummary(self, pbLimit=2):
         events = len(self.runCount)
-        regularPbs = {k:v for k,v in self.runners.items() if v['pbCount'] >= pbLimit}	
-      
+        selected = {k:v for k,v in self.runners.items() if v['pbCount'] >= pbLimit}
+        selectedList = sorted(selected.items(), key=lambda x: x[1]['name'])
+		 
         header = []
         header.append(self.templates.tableHeaderCellSummaryTemplate.format('PBs', pbLimit, events))
 		
         html = self.templates.tableStart 
-        html += self.templates.tableHeaderTemplate.format(100, header)
-        for l,v in regularPbs: 
+        html += self.templates.tableHeaderTemplate.format(100, header[0])
+        for l,v in selectedList: 
             html += '<tr>'+self.templates.tableCell.format(v['name'])+'</tr>'
 
         html += self.templates.tableEnd
@@ -310,6 +317,7 @@ class RunReportWeek(RunReport):
         self.addSummarySection()
         self.addUpcomingSection()
         self.addVolunteerSection()
+        self.addMilestoneSection()
         
         if week == 1:
             self.addAgeGroupSection()
@@ -333,8 +341,10 @@ class RunReportWeek(RunReport):
         # get text until first .
         content += '<li>'+text[:text.find('.')+1]+'</li>'
         
-        # get text from second last . (with white space at start trimmed) 
-        pos = text.rfind('.', 0, text.rfind('.'))
+        # get text from third last . (with white space at start trimmed) 
+        pos = text.rfind('.')
+        pos = text.rfind('.', 0, pos)
+        pos = text.rfind('.', 0, pos)
         content += '<li>'+text[pos+1:].strip()+'</li>'
         
         content += '</ul>'
@@ -355,14 +365,18 @@ class RunReportWeek(RunReport):
         html += self.getSectionContent(content)
         html += self.getSectionSeparator()
         self.runReportHTML += html
+		
+    def addMilestoneSection(self):
+        # TODO only Add if there are any milestones
+        html = self.getSectionHeading('milestone','Milestones')
+        content = ''
+        html += self.getSectionContent(content)
+        html += self.getSectionSeparator()
+        self.runReportHTML += html
         
     def addVolunteerSection(self):  
         html = self.getSectionHeading('volunteers','Volunteers')
-        content = '''
-Jells parkrun relies on volunteers to bring you a free, timed event each week. We encourage everyone to volunteer because it's fun, rewarding, and giving to your community. 
-Please review the <a href="https://www.parkrun.com.au/jells/volunteer/futureroster/">Future Roster</a> to see where volunteers are needed and email <a href="mailto:jellshelpers@parkrun.com">jellshelpers@parkrun.com</a> 
-if you can help. The wonderful volunteers who made this event possible are:
-'''
+        content = self.templates.volunteerText
         content += self.getCurrentEventVolunteerHTML()
         html += self.getSectionContent(content)      
         html += self.getPhotoLinks('volunteer')
