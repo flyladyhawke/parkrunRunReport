@@ -18,7 +18,7 @@ class StandardTemplate:
 </tr>
 '''
 
-    tableHeaderCellTemplate =  '<th style="width: {}%; text-align: center; border: 1px solid #ccc !important;">{}</th>'
+    tableHeaderCellTemplate =  '<th style="width: {}%; text-align: center; border: 1px solid #ccc !important;" colspan="{}">{}</th>'
 
     tableHeaderCellSummaryTemplate = '{} ({} or more from last {} events)'
 

@@ -139,7 +139,7 @@ class RunReport(object):
                          pbCount = 1   
                 
                 self.runners[details['id']] = {"name":details['name'],"pbCount":pbCount,"count":count}
-        self.runCount.append(eventCount);        
+        self.runCount.append(eventCount); 
         
     def addVolunteers(self, text):  
         text = text.strip()
@@ -194,7 +194,7 @@ class RunReport(object):
         return html 
 
     def getTableHeaderCellTemplate(self, width, header, colspan=1):
-        return self.templates.tableHeaderCellTemplate.format(width, header, colspan)
+        return self.templates.tableHeaderCellTemplate.format(width, colspan, header)
         
     def getSummaryTableHTML(self, headers, selectedList):
         width = math.floor(100 / len(headers))
@@ -224,8 +224,30 @@ class RunReport(object):
         html = self.getSummaryTableHTML(headers, selectedList)
 		
         return html	
-	
-    def getAgeGroupFinisher(self, list):
+        
+    def calcAgeGroups(self):
+        list = self.currentEventRunners
+        ageGroup = {}
+        for l, v in list.items():
+            age = v['ageGroup']
+            ageNumber = age[2:]
+            if age[0:2] == 'SM' or age[0:2] == 'VM':
+                if ageNumber not in ageGroup:
+                    ageGroup[ageNumber] = {'menName':'','menTime':'','womenName':'','womenTime':''}
+                if ageGroup[ageNumber]['menName'] == '':
+                    ageGroup[ageNumber]['menName'] = v['name']
+                    ageGroup[ageNumber]['menTime'] = v['time']
+            elif age[0:2] == 'SW' or age[0:2] == 'VW':
+                if ageNumber not in ageGroup:
+                    ageGroup[ageNumber] = {'menName':'','menTime':'','womenName':'','womenTime':''} 
+                if ageGroup[ageNumber]['womenName'] == '':
+                    ageGroup[ageNumber]['womenName'] = v['name']
+                    ageGroup[ageNumber]['womenTime'] = v['time']
+        sortedAge = sorted(ageGroup.items(), key=lambda x: x[0])   
+        return sortedAge 
+        
+    def getAgeGroupFinisher(self):        
+        list = self.calcAgeGroups()
         html = self.templates.tableStart
         html += '<tr>'
         html += self.getTableHeaderCellTemplate(20, 'Age Group')
