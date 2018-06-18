@@ -26,7 +26,7 @@ class StandardTemplate:
 {}</td>
 '''
     
-    photoTemplate = '<img src="{}" alt="{}" width="{}" height="{}" />'
+    photoTemplate = '<img src="{}" alt="{}" width="{}" height="{}" />{}'
     
     tableEnd = '</tbody></table>' 
     

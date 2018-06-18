@@ -1,6 +1,4 @@
 from bs4 import BeautifulSoup
-import math
-import requests
 import re
 import src.RunReportTemplates as reportTemplates
 	
@@ -154,7 +152,7 @@ class RunReport(object):
                  count = 1
             self.volunteers[n] = count            
             
-    def addPhoto(self, text, size, photoType):
+    def addPhoto(self, text, size, photoType, title=''):
         text = text.strip()
         if text == '':
             return	
@@ -162,20 +160,26 @@ class RunReport(object):
         endPos = text.find('.jpg') + len('.jpg')
         flickrLink = text[startPos:endPos]
         
-        self.photos.append({'link':flickrLink,'size':size,'type':photoType})   
+        self.photos.append({'link':flickrLink,'size':size,'type':photoType,'title':title})   
      
     def getPhotoLinks(self, photoType):
         html = ''
+        pictureWidth = 620
         for p in self.photos:
             if p['type'] == photoType:
                 dims = p['size']
-                if int(dims[0]) == 640:
-                    dims[0] = 620
-                    dims[1] = math.floor(620 * int(dims[1]) / 640)
-                elif int(dims[1]) == 640:
-                    dims[1] = 620
-                    dims[0] = math.floor(620 * int(dims[0]) / 640)
-                html += self.templates.photoTemplate.format(p['link'],p['type'],dims[0],dims[1])
+                title = p['title']
+                currWidth = int(dims[0])
+                currHeight = int(dims[1])
+                if currWidth >= currHeight:
+                    dims[0] = pictureWidth
+                    dims[1] = (pictureWidth * currHeight) // currWidth
+                elif currHeight > currWidth:
+                    # get two pictures on one row
+                    dims[0] = pictureWidth // 2 - 5
+                    dims[1] = ((pictureWidth / 2 - 5) * currHeight) // currWidth                   
+                html += self.templates.photoTemplate.format(p['link'],p['type'],dims[0],dims[1],title)
+                # TODO add &nbsp; if odd count
         
         return html       
         
@@ -197,7 +201,7 @@ class RunReport(object):
         return self.templates.tableHeaderCellTemplate.format(width, colspan, header)
         
     def getSummaryTableHTML(self, headers, selectedList):
-        width = math.floor(100 / len(headers))
+        width = 100 // len(headers)
      
         html = self.templates.tableStart 
         html += '<tr>'      
@@ -276,7 +280,7 @@ class RunReport(object):
         header = []
         header.append(self.templates.tableHeaderCellSummaryTemplate.format('Runners', runnerLimit, events))
         header.append(self.templates.tableHeaderCellSummaryTemplate.format('Volunteers', volunteerLimit, events))
-        width = math.floor(100 / len(headers))
+        width = 100 / len(headers)
          
         html = self.templates.tableStart
         html += self.templates.tableHeader.format(runnerLimit, events, volunteerLimit, events)
@@ -339,7 +343,7 @@ class RunReportWeek(RunReport):
     def addSummarySection(self):
         text = self.resultsSystemText
         html = self.getSectionHeading('summary','Summary')
-        content = '<ul>';
+        content = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
         
         # get text until first .
         content += '<li>'+text[:text.find('.')+1]+'</li>'
@@ -366,8 +370,7 @@ class RunReportWeek(RunReport):
     def addMilestoneSection(self):
         # TODO only Add if there are any milestones
         html = self.getSectionHeading('milestone','Milestones')
-        content = ''
-        html += self.getSectionContent(content)
+        html += self.getPhotoLinks('milestone')
         html += self.getSectionSeparator()
         self.runReportHTML += html
         
