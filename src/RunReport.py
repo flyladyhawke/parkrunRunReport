@@ -223,7 +223,7 @@ class RunReport(object):
         selectedList = sorted(selected.items(), key=lambda x: x[1]['name'])
 		 
         headers = []
-        headers.append(self.getTableHeaderCellTemplate('PBs', pbLimit, events))
+        headers.append(self.templates.tableHeaderCellSummaryTemplate.format('PBs', pbLimit, events))
 		
         html = self.getSummaryTableHTML(headers, selectedList)
 		
