@@ -2,7 +2,11 @@ from bs4 import BeautifulSoup
 import re
 import src.RunReportTemplates as reportTemplates
 	
-class RunReport(object):   
+class RunReport(object):  
+    templates = False
+    parkrunName = ''  
+    parkrunEventNumber = ''
+    
     resultsSystemText = ''
     templates = False
     currentEventVolunteers = []
@@ -18,8 +22,10 @@ class RunReport(object):
     VOLUNTEER_START_TEXT = 'We are very grateful to the volunteers who made this event happen:'
     PB_TEXT = 'New PB!'  
 	
-    def __init__(self):
+    def __init__(self, name, eventNumber):
         self.templates = reportTemplates.StandardTemplate()   
+        self.parkrunName = name
+        self.parkrunEventNumber = eventNumber      
 	
     def setResultsSystem(self, text):
         text = text.strip()
@@ -277,9 +283,9 @@ class RunReport(object):
         regularVolunteer = {k:v for k,v in self.volunteers.items() if v >= volunteerLimit}
         volunteerList = sorted(regularVolunteer.items(), key=lambda x: x[0])
                  
-        header = []
-        header.append(self.templates.tableHeaderCellSummaryTemplate.format('Runners', runnerLimit, events))
-        header.append(self.templates.tableHeaderCellSummaryTemplate.format('Volunteers', volunteerLimit, events))
+        headers = []
+        headers.append(self.templates.tableHeaderCellSummaryTemplate.format('Runners', runnerLimit, events))
+        headers.append(self.templates.tableHeaderCellSummaryTemplate.format('Volunteers', volunteerLimit, events))
         width = 100 / len(headers)
          
         html = self.templates.tableStart
@@ -318,21 +324,58 @@ class RunReport(object):
 
 class RunReportWeek(RunReport):
     
+    parkrunWeek = 1
+    options = {'runnerLimit':7, 'volunteerLimit':2, 'pbLimit':2, 'eventNumber':8}
     runReportHTML = ''	
+    
+    def __init__(self, name, eventNumber, week, options):
+        RunReport.__init__(self, name, eventNumber)
+        self.parkrunWeek = week
+        # merge options
+        self.options = {**self.options, **options} 
+        
+        self.printUrls()
+        
+    def printUrls(self):
+        links = []
+        eventNumber = str(self.parkrunEventNumber);
+        links.append('tag: '+self.parkrunName+'_parkrun_'+eventNumber)
+        links.append('tag: '+self.parkrunName)
+        links.append('tag: parkrun')
+        links.append('https://www.flickr.com/groups_pool_add.gne?path='+self.parkrunName+'-parkrun')
+        links.append('https://www.flickr.com/groups/'+self.parkrunName+'-parkrun/')               
+        links.append('http://www.parkrun.com.au/'+self.parkrunName+'/results/weeklyresults/?runSeqNumber='+eventNumber)
+        
+        if self.parkrunWeek == 2 or self.parkrunWeek == 3:
+             for i in range(1, self.options['eventNumber']):
+                eventNumber = str(self.parkrunEventNumber - i)
+                links.append('http://www.parkrun.com.au/'+self.parkrunName+'/results/weeklyresults/?runSeqNumber='+eventNumber)
+          
+        # TODO display as html  
+        print('Links to use in the below sections')
+        print("\n".join(links))
 	
-    def createWeek(self, week, options):
+    def createWeek(self, week=False, options=False):
         self.addSummarySection()
         self.addUpcomingSection()
         self.addVolunteerSection()
         self.addMilestoneSection()
         
-        if week == 1:
+        # allow override of week and options since week and options in class init are only used for link creation.
+        if week != False:
+            self.parkrunWeek = week
+            
+        # merge options
+        if options != False:
+            self.options = {**self.options, **options}     
+        
+        if self.parkrunWeek == 1:
             self.addAgeGroupSection()
-        elif week == 2:   
-            self.addRegularSection(options['runnerLimit'],options['volunteerLimit'])
-        elif week == 3:  
-            self.addWeekPBSection(options['pbLimit'])
-        elif week == 4:  
+        elif self.parkrunWeek == 2:   
+            self.addRegularSection(self.options['runnerLimit'],self.options['volunteerLimit'])
+        elif self.parkrunWeek == 3:  
+            self.addWeekPBSection(self.options['pbLimit'])
+        elif self.parkrunWeek == 4:  
             self.addCommunitySection()
             
         self.addTimesSection()
