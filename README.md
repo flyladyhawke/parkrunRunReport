@@ -34,13 +34,13 @@ Jupiter Notebook to create html code for wordpress parkrun run reports
 **flickr add to group**   
 * Join the &lt;parkrunname&gt;-parkrun flickr group if you haven't already
 * Add your photos to the photo pool for the parkrun 
-* https://www.flickr.com/groups_pool_add.gne?path=&lt;parkrunname&gt;-parkrun
+* https://www.flickr.com/groups_pool_add.gne?path=<parkrunname>-parkrun
 * search the &lt;parkrunname&gt;\_parkrun\_&lt;eventnumber&gt; tag and bring up just the ones from this week.
 * add the photos to the photo pool for the parkrun 6 at a time
 
 **flickr get urls for photo links**   
 * go to the main flickr group page
-* https://www.flickr.com/groups/&lt;parkrunname&gt;-parkrun/
+* https://www.flickr.com/groups/<parkrunname>-parkrun/
 * search for the &lt;parkrunname&gt;\_parkrun\_&lt;eventnumber&gt; tag
 * Click on each photo. 
 * Click on the 'Share Photo' icon
@@ -62,7 +62,7 @@ Jupiter Notebook to create html code for wordpress parkrun run reports
 * Open url in new browser window, right click and select 'View page source'
 * use control-f to search for  id="results"
 * copy from the 
-  * <table class="sortable" id="results" 
+  * &lt;table class="sortable" id="results" 
 * to the following text on the next line
   * What is this table? &lt;/h3&gt; 
 * paste in the events cell on the blank line between the ''' and '''
