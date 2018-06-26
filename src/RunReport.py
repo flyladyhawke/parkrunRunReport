@@ -1,17 +1,17 @@
 from bs4 import BeautifulSoup
 import re
 import src.RunReportTemplates as reportTemplates
-	
+
 class RunReport(object):  
     templates = False
-    parkrunName = ''  
-    parkrunEventNumber = ''
-    options = {'runnerLimit':7, 'volunteerLimit':2, 'pbLimit':2, 'eventNumber':8}
+    parkrun_name = ''
+    parkrun_event_number = ''
+    options = {'runner_limit':7, 'volunteer_limit':2, 'pb_limit':2, 'event_limit':8}
     
-    resultsSystemText = ''
+    results_system_text = ''
     templates = False
-    currentEventVolunteers = []
-    currentEventRunners = {}
+    current_event_volunteers = []
+    current_event_runners = {}
     photos = []
     
     toc = []
@@ -22,43 +22,43 @@ class RunReport(object):
     
     VOLUNTEER_START_TEXT = 'We are very grateful to the volunteers who made this event happen:'
     PB_TEXT = 'New PB!'  
-	
-    def __init__(self, name, eventNumber):
+
+    def __init__(self, name, event_number):
         self.templates = reportTemplates.StandardTemplate()   
-        self.parkrunName = name
-        self.parkrunEventNumber = eventNumber   
+        self.parkrun_name = name
+        self.parkrun_event_number = event_number
   
         # make sure these are reset each time you call the init
         self.runners = {}
         self.volunteers = {}
-	
-    def setResultsSystem(self, text):
+
+    def set_results_system(self, text):
         text = text.strip()
         if text == '':
             return	
-        self.resultsSystemText = text  
+        self.results_system_text = text
 
-    def parseEvent(self, text, is_current=False):
+    def parse_event_result(self, text, is_current=False):
         text = text.strip()
         if text == '':
             return	
         if is_current:
-            self.setCurrentEvent(text)
-        self.parseRunners(text)	
-        self.parseVolunteers(text)		
+            self.set_current_event(text)
+        self.parse_runners(text)
+        self.parse_volunteers(text)
         
-    def setCurrentEvent(self, text):
+    def set_current_event(self, text):
         text = text.strip()
         if text == '':
             return	
         # set currentEventRunners and currentEventVolunteers 
-        self.setCurrentEventRunners(text)
-        self.setCurrentEventVolunteers(text)            
+        self.set_current_event_runners(text)
+        self.set_current_event_volunteers(text)
             
-    def parseCurrentEvent(self, text, parseType):
+    def parse_current_event(self, text, parseType):
         soup = BeautifulSoup(text,'html.parser')		
         if parseType == 'runners':
-			# get every row from the result table
+            # get every row from the result table
             rows = soup.find(id="results").find("tbody").find_all("tr")
         elif parseType == 'volunteers':
             # <p class="paddedb">
@@ -71,42 +71,42 @@ class RunReport(object):
             rows = sub.split(', ')          
         return rows    
             
-    def setCurrentEventRunners(self, text):        
-        self.currentEventRunners = {}
-        rows = self.parseCurrentEvent(text, 'runners')      
+    def set_current_event_runners(self, text):
+        self.current_event_runners = {}
+        rows = self.parse_current_event(text, 'runners')
         for row in rows:
-            details = self.getRunnerDetails(row.find_all("td"))
+            details = self.get_runner_details(row.find_all("td"))
             if details:
-                self.currentEventRunners[details['id']] = {"name":details['name'],"time":details['time'],"ageGroup":details['ageGroup']}                
+                self.current_event_runners[details['id']] = {"name":details['name'], "time":details['time'], "age_group":details['age_group']}
                 
-    def setCurrentEventVolunteers(self, text):    
-        self.currentEventVolunteers = []    
-        names = self.parseCurrentEvent(text, 'volunteers')          
+    def set_current_event_volunteers(self, text):
+        self.current_event_volunteers = []
+        names = self.parse_current_event(text, 'volunteers')
         for n in names:
-            self.currentEventVolunteers.append(n)          
+            self.current_event_volunteers.append(n)
         
-    def addTOC(self, anchor, heading):
+    def add_toc(self, anchor, heading):
         # Add to toc
         self.toc.append('<li><a href="#'+anchor+'">'+heading+'</a></li>')      
         
-    def getSectionHeading(self, anchor, heading):
-        self.addTOC(anchor, heading)
+    def get_section_heading(self, anchor, heading):
+        self.add_toc(anchor, heading)
         return self.templates.sectionHeadingTemplate.format(anchor, heading)    
     
-    def getSectionContent(self, content):
+    def get_section_content(self, content):
         return self.templates.sectionContentTemplate.format(content)    
     
-    def getSectionSeparator(self):
+    def get_section_separator(self):
         return self.templates.separator    
     
-    def getCurrentEventVolunteerHTML(self):
+    def get_current_event_volunteer_html(self):
         html = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
-        for vol in self.currentEventVolunteers:
+        for vol in self.current_event_volunteers:
             html += '<li>'+vol+'</li>'
         html += '</ul>'
         return html    
            
-    def getRunnerDetails(self, cells):
+    def get_runner_details(self, cells):
         # <tr>
         # <td class="pos">2</td>
         # <td><a href="athletehistory?athleteNumber=111111" target="_top">Firstname LASTNAME</a></td>
@@ -129,89 +129,89 @@ class RunReport(object):
             id = href[pos+1:]
             
             time = cells[2].get_text()
-            ageGroup = cells[3].get_text()
+            age_group = cells[3].get_text()
             position = cells[0].get_text()
             pb = 0
             if cells[8].get_text() == self.PB_TEXT:
                 pb = 1
 
-            return {"id":id,"name":name,"time":time,"pb":pb,"ageGroup":ageGroup,"position":position}
+            return {"id":id,"name":name,"time":time,"pb":pb,"age_group":age_group,"position":position}
         else:
             return False  
         
-    def parseRunners(self, text):
+    def parse_runners(self, text):
         text = text.strip()
         if text == '':
             return	
-        rows = self.parseCurrentEvent(text, 'runners') 
-        eventCount = 0
+        rows = self.parse_current_event(text, 'runners')
+        event_count = 0
         for row in rows:
             cells = row.find_all("td")
-            details = self.getRunnerDetails(cells)
+            details = self.get_runner_details(cells)
             if details:
-                eventCount = eventCount + 1
-                pbCount = 0
+                event_count = event_count + 1
+                pb_count = 0
                 if details['id'] in self.runners:
                     count = self.runners[details['id']]['count'] + 1
                     if details['pb'] == 1:
-                        pbCount = self.runners[details['id']]['pbCount'] + 1
+                        pb_count = self.runners[details['id']]['pb_count'] + 1
                     else:
-                        pbCount = self.runners[details['id']]['pbCount']
+                        pb_count = self.runners[details['id']]['pb_count']
                 else:
                     count = 1
                     if details['pb'] == 1:
-                         pbCount = 1   
+                         pb_count = 1
                 
-                self.runners[details['id']] = {"name":details['name'],"pbCount":pbCount,"count":count}
-        self.runCount.append(eventCount); 
+                self.runners[details['id']] = {"name":details['name'],"pb_count":pb_count,"count":count}
+        self.runCount.append(event_count);
         
-    def parseVolunteers(self, text):  
+    def parse_volunteers(self, text):
         text = text.strip()
         if text == '':
             return	
-        names = self.parseCurrentEvent(text, 'volunteers') 
+        names = self.parse_current_event(text, 'volunteers')
         
         for n in names:
             if n in self.volunteers:
                 count = self.volunteers[n] + 1
             else:
-                 count = 1
+                count = 1
             self.volunteers[n] = count            
             
-    def addPhoto(self, text, size, photoType, title=''):
+    def add_photo(self, text, size, photo_type, title=''):
         text = text.strip()
         if text == '':
             return	
-        startPos = text.find('[img]') + len('[img]')
-        endPos = text.find('.jpg') + len('.jpg')
-        flickrLink = text[startPos:endPos]
+        start_pos = text.find('[img]') + len('[img]')
+        end_pos = text.find('.jpg') + len('.jpg')
+        flickr_link = text[start_pos:end_pos]
         
-        self.photos.append({'link':flickrLink,'size':size,'type':photoType,'title':title})   
+        self.photos.append({'link':flickr_link,'size':size,'type':photo_type, 'title':title})
      
-    def getPhotoLinks(self, photoType):
+    def get_photo_links(self, photo_type):
         html = ''
-        pictureWidth = 620
+        picture_width = 620
         for p in self.photos:
-            if p['type'] == photoType:
+            if p['type'] == photo_type:
                 dims = p['size']
                 title = p['title']
-                currWidth = int(dims[0])
-                currHeight = int(dims[1])
-                if currWidth >= currHeight:
-                    dims[0] = pictureWidth
-                    dims[1] = (pictureWidth * currHeight) // currWidth
-                elif currHeight > currWidth:
+                curr_width = int(dims[0])
+                curr_height = int(dims[1])
+                if curr_width >= curr_height:
+                    dims[0] = picture_width
+                    dims[1] = (picture_width * curr_height) // curr_width
+                elif curr_height > curr_width:
                     # get two pictures on one row
-                    dims[0] = pictureWidth // 2 - 5
-                    dims[1] = ((pictureWidth / 2 - 5) * currHeight) // currWidth                   
+                    dims[0] = picture_width // 2 - 5
+                    dims[1] = ((picture_width / 2 - 5) * curr_height) // curr_width
                 html += self.templates.photoTemplate.format(p['link'],p['type'],dims[0],dims[1],title)
                 # TODO add &nbsp; if odd count
         
         return html       
         
-    def getAestheticTimes(self):
+    def get_aesthetic_times(self):
         html = ''
-        for key, data in self.currentEventRunners.items():
+        for key, data in self.current_event_runners.items():
             time = data['time']
             # end in :00 or start = end like 21:21
             if time[-2:] == '00' or time[-2:] == time[0:2]:
@@ -223,19 +223,19 @@ class RunReport(object):
             elif time[0] == time[4] and time[1] == time[2]:
                 html += time + ' - ' + data['name'] + '<br/>' 
         
-        html = self.getSectionContent(html)
+        html = self.get_section_content(html)
         return html 
 
-    def getTableHeaderCellTemplate(self, width, header, colspan=1):
+    def get_table_header_cell_template(self, width, header, colspan=1):
         return self.templates.tableHeaderCellTemplate.format(width, colspan, header)
         
-    def getSummaryTableHTML(self, headers, selected_list):
+    def get_summary_table_html(self, headers, selected_list):
         width = 100 // len(headers)
      
         html = self.templates.tableStart 
         html += '<tr>'      
         for header in headers:
-            html += self.getTableHeaderCellTemplate(width, header, 2)
+            html += self.get_table_header_cell_template(width, header, 2)
         html += '</tr>'
         
         count = 0;       
@@ -250,47 +250,47 @@ class RunReport(object):
         html += self.templates.tableEnd
         return html
         
-    def getPBSummary(self, pbLimit=2):
+    def get_pb_summary(self, pbLimit=2):
         events = len(self.runCount)
 
-        selected = {k:v for k,v in self.runners.items() if v['pbCount'] >= pbLimit}
-        selectedList = sorted(selected.items(), key=lambda x: x[1]['name'])
-		 
+        selected = {k:v for k,v in self.runners.items() if v['pb_count'] >= pbLimit}
+        selected_list = sorted(selected.items(), key=lambda x: x[1]['name'])
+
         headers = []
         headers.append(self.templates.tableHeaderCellSummaryTemplate.format('PBs', pbLimit, events))
-		
-        html = self.getSummaryTableHTML(headers, selectedList)
-		
+
+        html = self.get_summary_table_html(headers, selected_list)       
+
         return html	
         
-    def calcAgeGroups(self):
-        list = self.currentEventRunners
-        ageGroup = {}
-        for l, v in list.items():
-            age = v['ageGroup']
-            ageNumber = age[2:]
+    def calc_age_groups(self):
+        runners = self.current_event_runners
+        age_group = {}
+        for l, v in runners.items():
+            age = v['age_group']
+            age_number = age[2:]
             if age[0:2] == 'SM' or age[0:2] == 'VM':
-                if ageNumber not in ageGroup:
-                    ageGroup[ageNumber] = {'menName':'','menTime':'','womenName':'','womenTime':''}
-                if ageGroup[ageNumber]['menName'] == '':
-                    ageGroup[ageNumber]['menName'] = v['name']
-                    ageGroup[ageNumber]['menTime'] = v['time']
+                if age_number not in age_group:
+                    age_group[age_number] = {'menName':'','menTime':'','womenName':'','womenTime':''}
+                if age_group[age_number]['menName'] == '':
+                    age_group[age_number]['menName'] = v['name']
+                    age_group[age_number]['menTime'] = v['time']
             elif age[0:2] == 'SW' or age[0:2] == 'VW':
-                if ageNumber not in ageGroup:
-                    ageGroup[ageNumber] = {'menName':'','menTime':'','womenName':'','womenTime':''} 
-                if ageGroup[ageNumber]['womenName'] == '':
-                    ageGroup[ageNumber]['womenName'] = v['name']
-                    ageGroup[ageNumber]['womenTime'] = v['time']
-        sortedAge = sorted(ageGroup.items(), key=lambda x: x[0])   
-        return sortedAge 
+                if age_number not in age_group:
+                    age_group[age_number] = {'menName':'','menTime':'','womenName':'','womenTime':''}
+                if age_group[age_number]['womenName'] == '':
+                    age_group[age_number]['womenName'] = v['name']
+                    age_group[age_number]['womenTime'] = v['time']
+        sorted_age = sorted(age_group.items(), key=lambda x: x[0])
+        return sorted_age
         
-    def getAgeGroupFinisher(self):        
-        list = self.calcAgeGroups()
+    def get_age_group_finisher(self):
+        list = self.calc_age_groups()
         html = self.templates.tableStart
         html += '<tr>'
-        html += self.getTableHeaderCellTemplate(20, 'Age Group')
-        html += self.getTableHeaderCellTemplate(40, 'Men', 2)
-        html += self.getTableHeaderCellTemplate(40, 'Women', 2)
+        html += self.get_table_header_cell_template(20, 'Age Group')
+        html += self.get_table_header_cell_template(40, 'Men', 2)
+        html += self.get_table_header_cell_template(40, 'Women', 2)
         html += '</tr>'
         for l, v in list:
             html += '<tr>'  
@@ -303,37 +303,38 @@ class RunReport(object):
         html += self.templates.tableEnd
         return html	
         
-    def getRegularSummary(self, runnerLimit, volunteerLimit):
+    def get_regular_summary(self, runner_limit, volunteer_limit):
         events = len(self.runCount)
-        regularRunners = {k:v for k,v in self.runners.items() if v['count'] >= runnerLimit}
-        runnersList = sorted(regularRunners.items(), key=lambda x: x[1]['name'])  
+        regular_runners = {k:v for k,v in self.runners.items() if v['count'] >= runner_limit}
+        runners_list = sorted(regular_runners.items(), key=lambda x: x[1]['name'])
         
-        regularVolunteer = {k:v for k,v in self.volunteers.items() if v >= volunteerLimit}
-        volunteerList = sorted(regularVolunteer.items(), key=lambda x: x[0])
+        regular_volunteer = {k:v for k,v in self.volunteers.items() if v >= volunteer_limit}
+        volunteer_list = sorted(regular_volunteer.items(), key=lambda x: x[0])
                  
-        headers = []
-        headers.append(self.templates.tableHeaderCellSummaryTemplate.format('Runners', runnerLimit, events))
-        headers.append(self.templates.tableHeaderCellSummaryTemplate.format('Volunteers', volunteerLimit, events))
+        headers = [
+        self.templates.tableHeaderCellSummaryTemplate.format('Runners', runner_limit, events),
+        self.templates.tableHeaderCellSummaryTemplate.format('Volunteers', volunteer_limit, events)
+        ]
         width = 100 / len(headers)
          
         html = self.templates.tableStart
-        html += self.templates.tableHeader.format(runnerLimit, events, volunteerLimit, events)
+        html += self.templates.tableHeader.format(runner_limit, events, volunteer_limit, events)
         html += '<tr>'      
         for header in headers:
-            html += self.getTableHeaderCellTemplate(width, header)
+            html += self.get_table_header_cell_template(width, header)
         html += '</tr>'
         
         # work out a better way of transposing two arrays of diff lengths
         rows = {} 
         
         count = 1
-        for l,v in runnersList: 
+        for l,v in runners_list:
             rows[count] = []
             rows[count].append(self.templates.tableCell.format(v['name']))
             count = count + 1
           
         count = 1
-        for key,value in volunteerList: 
+        for key,value in volunteer_list:
             rows[count].append(self.templates.tableCell.format(key))
             count = count + 1 
             
@@ -347,72 +348,72 @@ class RunReport(object):
             
         html += self.templates.tableEnd
         
-        return html;
+        return html
 
 
 class RunReportWeek(RunReport):
     
-    parkrunWeek = 1
-    runReportHTML = ''	
+    parkrun_week = 1
+    run_report_html = ''
     
-    def __init__(self, name, eventNumber, week, options):
-        RunReport.__init__(self, name, eventNumber)
-        self.parkrunWeek = week
+    def __init__(self, name, event_number, week, options):
+        RunReport.__init__(self, name, event_number)
+        self.parkrun_week = week
         # merge options
-        self.options = {**self.options, **options} 
+        self.options = {**self.options, **options}
         
-        self.printUrls()
+        self.print_urls()
         
-    def printUrls(self):
+    def print_urls(self):
         links = []
-        eventNumber = str(self.parkrunEventNumber);
-        links.append('tag: '+self.parkrunName+'_parkrun_'+eventNumber)
-        links.append('tag: '+self.parkrunName)
+        event_number = str(self.parkrun_event_number);
+        links.append('tag: ' + self.parkrun_name + '_parkrun_' + event_number)
+        links.append('tag: ' + self.parkrun_name)
         links.append('tag: parkrun')
-        links.append('https://www.flickr.com/groups_pool_add.gne?path='+self.parkrunName+'-parkrun')
-        links.append('https://www.flickr.com/groups/'+self.parkrunName+'-parkrun/')               
-        links.append('http://www.parkrun.com.au/'+self.parkrunName+'/results/weeklyresults/?runSeqNumber='+eventNumber)
+        links.append('https://www.flickr.com/groups_pool_add.gne?path=' + self.parkrun_name + '-parkrun')
+        links.append('https://www.flickr.com/groups/' + self.parkrun_name + '-parkrun/')
+        links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
         
-        if self.parkrunWeek == 2 or self.parkrunWeek == 3:
-             for i in range(1, self.options['eventNumber']):
-                eventNumber = str(self.parkrunEventNumber - i)
-                links.append('http://www.parkrun.com.au/'+self.parkrunName+'/results/weeklyresults/?runSeqNumber='+eventNumber)
+        if self.parkrun_week == 2 or self.parkrun_week == 3:
+             for i in range(1, self.options['event_number']):
+                event_number = str(self.parkrun_event_number - i)
+                links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
           
         # TODO display as html  
         print('Links to use in the below sections')
         print("\n".join(links))
-	
-    def createWeek(self, week=False, options=False):
-        self.addSummarySection()
-        self.addUpcomingSection()
-        self.addVolunteerSection()
-        self.addMilestoneSection()
+
+    def create_week(self, week=False, options=False):
+        self.add_summary_section()
+        self.add_upcoming_section()
+        self.add_volunteer_section()
+        self.add_milestone_section()
         
         # allow override of week and options since week and options in class init are only used for link creation.
-        if week != False:
-            self.parkrunWeek = week
+        if week is not False:
+            self.parkrun_week = week
             
         # merge options
-        if options != False:
-            self.options = {**self.options, **options}     
+        if options is not False:
+            self.options = {**self.options, **options}
         
-        if self.parkrunWeek == 1:
-            self.addAgeGroupSection()
-        elif self.parkrunWeek == 2:   
-            self.addRegularSection(self.options['runnerLimit'],self.options['volunteerLimit'])
-        elif self.parkrunWeek == 3:  
-            self.addWeekPBSection(self.options['pbLimit'])
-        elif self.parkrunWeek == 4:  
-            self.addCommunitySection()
+        if self.parkrun_week == 1:
+            self.add_age_group_section()
+        elif self.parkrun_week == 2:
+            self.add_regular_section(self.options['runner_limit'], self.options['volunteer_limit'])
+        elif self.parkrun_week == 3:
+            self.add_week_pb_section(self.options['pb_limit'])
+        elif self.parkrun_week == 4:
+            self.add_community_section()
             
-        self.addTimesSection()
-        self.addPhotoSection()
+        self.add_times_section()
+        self.add_photo_section()
     
-        return self.getFullRunReportHTML()
+        return self.get_full_run_report_html()
 
-    def addSummarySection(self):
-        text = self.resultsSystemText
-        html = self.getSectionHeading('summary','Summary')
+    def add_summary_section(self):
+        text = self.results_system_text
+        html = self.get_section_heading('summary', 'Summary')
         content = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
         
         # get text until first .
@@ -426,67 +427,67 @@ class RunReportWeek(RunReport):
         
         content += '</ul>'
         content += self.templates.summaryThanks       
-        html += self.getSectionContent(content) 
-        html += self.getSectionSeparator()
-        self.runReportHTML += html
+        html += self.get_section_content(content)
+        html += self.get_section_separator()
+        self.run_report_html += html
     
-    def addUpcomingSection(self):
-        html = self.getSectionHeading('upcoming','Upcoming')
+    def add_upcoming_section(self):
+        html = self.get_section_heading('upcoming', 'Upcoming')
         content = self.templates.upcomingText;
-        html += self.getSectionContent(self.templates.upcomingText)
-        html += self.getSectionSeparator()
-        self.runReportHTML += html
-		
-    def addMilestoneSection(self):
+        html += self.get_section_content(self.templates.upcomingText)
+        html += self.get_section_separator()
+        self.run_report_html += html
+
+    def add_milestone_section(self):
         # TODO only Add if there are any milestones
-        html = self.getSectionHeading('milestone','Milestones')
-        html += self.getPhotoLinks('milestone')
-        html += self.getSectionSeparator()
-        self.runReportHTML += html
+        html = self.get_section_heading('milestone', 'Milestones')
+        html += self.get_photo_links('milestone')
+        html += self.get_section_separator()
+        self.run_report_html += html
         
-    def addVolunteerSection(self):  
-        html = self.getSectionHeading('volunteers','Volunteers')
+    def add_volunteer_section(self):
+        html = self.get_section_heading('volunteers', 'Volunteers')
         content = self.templates.volunteerText
-        content += self.getCurrentEventVolunteerHTML()
-        html += self.getSectionContent(content)      
-        html += self.getPhotoLinks('volunteer')
-        html += self.getSectionSeparator()
-        self.runReportHTML += html
+        content += self.get_current_event_volunteer_html()
+        html += self.get_section_content(content)
+        html += self.get_photo_links('volunteer')
+        html += self.get_section_separator()
+        self.run_report_html += html
     
-    def addAgeGroupSection(self):
-        html = self.getSectionHeading('agegroup','Age Group First Finishers')
-        html += self.getAgeGroupFinisher()
-        self.runReportHTML += html  
+    def add_age_group_section(self):
+        html = self.get_section_heading('age_group', 'Age Group First Finishers')
+        html += self.get_age_group_finisher()
+        self.run_report_html += html
         
-    def addRegularSection(self, runnerLimit=7, volunteerLimit=2):
-        html = self.getSectionHeading('regular','Regular Runners / Volunteers')
-        html += self.getRegularSummary(runnerLimit,volunteerLimit)
-        self.runReportHTML += html  
+    def add_regular_section(self, runner_limit=7, volunteer_limit=2):
+        html = self.get_section_heading('regular', 'Regular Runners / Volunteers')
+        html += self.get_regular_summary(runner_limit, volunteer_limit)
+        self.run_report_html += html
         
-    def addWeekPBSection(self, pbLimit=2):
-        html = self.getSectionHeading('pbs','Regular PBs')
-        html += self.getPBSummary(pbLimit)
-        self.runReportHTML += html
+    def add_week_pb_section(self, pbLimit=2):
+        html = self.get_section_heading('pbs', 'Regular PBs')
+        html += self.get_pb_summary(pbLimit)
+        self.run_report_html += html
             
-    def addCommunitySection(self):
-        html = self.getSectionHeading('fun','Having Fun')
-        self.runReportHTML += html
+    def add_community_section(self):
+        html = self.get_section_heading('fun', 'Having Fun')
+        self.run_report_html += html
         
-    def addTimesSection(self):
-        html = self.getSectionHeading('times','Aesthetically pleasing times')
-        html += self.getAestheticTimes()
-        html += self.getSectionSeparator()
-        self.runReportHTML += html
+    def add_times_section(self):
+        html = self.get_section_heading('times', 'Aesthetically pleasing times')
+        html += self.get_aesthetic_times()
+        html += self.get_section_separator()
+        self.run_report_html += html
             
-    def addPhotoSection(self):
-        html = self.getSectionHeading('photos','Photos')
-        html += self.getPhotoLinks('photo')
-        self.runReportHTML += html
+    def add_photo_section(self):
+        html = self.get_section_heading('photos', 'Photos')
+        html += self.get_photo_links('photo')
+        self.run_report_html += html
         
-    def getRunReportHeader(self):
+    def get_run_report_header(self):
         return '<h1 style="padding: 0;margin: 0">Run Report</h1>'
         
-    def getRunReportTOC(self):
+    def get_run_report_toc(self):
         html = '<ul>'
         for toc in self.toc:
            html += toc
@@ -494,10 +495,10 @@ class RunReportWeek(RunReport):
         
         return html    
         
-    def getFullRunReportHTML(self):
-        html = self.getRunReportHeader()
-        html += self.getRunReportTOC()
-        html += self.runReportHTML
+    def get_full_run_report_html(self):
+        html = self.get_run_report_header()
+        html += self.get_run_report_toc()
+        html += self.run_report_html
         
         return html
                 
