@@ -6,6 +6,7 @@ class RunReport(object):
     templates = False
     parkrunName = ''  
     parkrunEventNumber = ''
+    options = {'runnerLimit':7, 'volunteerLimit':2, 'pbLimit':2, 'eventNumber':8}
     
     resultsSystemText = ''
     templates = False
@@ -25,15 +26,28 @@ class RunReport(object):
     def __init__(self, name, eventNumber):
         self.templates = reportTemplates.StandardTemplate()   
         self.parkrunName = name
-        self.parkrunEventNumber = eventNumber      
+        self.parkrunEventNumber = eventNumber   
+  
+        # make sure these are reset each time you call the init
+        self.runners = {}
+        self.volunteers = {}
 	
     def setResultsSystem(self, text):
         text = text.strip()
         if text == '':
             return	
-        self.resultsSystemText = text       
+        self.resultsSystemText = text  
+
+    def parseEvent(self, text, is_current=False):
+        text = text.strip()
+        if text == '':
+            return	
+        if is_current:
+            self.setCurrentEvent(text)
+        self.parseRunners(text)	
+        self.parseVolunteers(text)		
         
-    def setCurrentEventAll(self, text):
+    def setCurrentEvent(self, text):
         text = text.strip()
         if text == '':
             return	
@@ -42,13 +56,14 @@ class RunReport(object):
         self.setCurrentEventVolunteers(text)            
             
     def parseCurrentEvent(self, text, parseType):
-        soup = BeautifulSoup(text,'html.parser')
+        soup = BeautifulSoup(text,'html.parser')		
         if parseType == 'runners':
+			# get every row from the result table
             rows = soup.find(id="results").find("tbody").find_all("tr")
         elif parseType == 'volunteers':
             # <p class="paddedb">
             # We are very grateful to the volunteers who made this event happen:
-            # Aaryan BHATIA, Naomi (Tullae) CROTTY, Darren JEFFREYS, Gregory MOORE, Sadia NAZIER, Jenny PATERSON, Elijah SUMMERS, Kaila SWYER, Rosemary WAGHORN, Ashley WILLIS, Nathan WRIGHT
+            # Aaryan BHATIA, Naomi (Tullae) CROTTY, Darren JEFFREYS, Gregory MOORE, Sadia NAZIER, Jenny PATERSON, Elijah SUMMERS, Kaila SWYER, Ashley WILLIS, Nathan WRIGHT
             # </p>  
             start = soup.p.find(text=re.compile(self.VOLUNTEER_START_TEXT))
             pos = start.find(':')
@@ -56,18 +71,19 @@ class RunReport(object):
             rows = sub.split(', ')          
         return rows    
             
-    def setCurrentEventRunners(self, text):
+    def setCurrentEventRunners(self, text):        
+        self.currentEventRunners = {}
         rows = self.parseCurrentEvent(text, 'runners')      
         for row in rows:
             details = self.getRunnerDetails(row.find_all("td"))
             if details:
                 self.currentEventRunners[details['id']] = {"name":details['name'],"time":details['time'],"ageGroup":details['ageGroup']}                
                 
-    def setCurrentEventVolunteers(self, text):              
+    def setCurrentEventVolunteers(self, text):    
+        self.currentEventVolunteers = []    
         names = self.parseCurrentEvent(text, 'volunteers')          
         for n in names:
-            self.currentEventVolunteers.append(n)
-            
+            self.currentEventVolunteers.append(n)          
         
     def addTOC(self, anchor, heading):
         # Add to toc
@@ -114,14 +130,16 @@ class RunReport(object):
             
             time = cells[2].get_text()
             ageGroup = cells[3].get_text()
+            position = cells[0].get_text()
             pb = 0
             if cells[8].get_text() == self.PB_TEXT:
                 pb = 1
-            return {"id":id,"name":name,"time":time,"pb":pb,"ageGroup":ageGroup}
+
+            return {"id":id,"name":name,"time":time,"pb":pb,"ageGroup":ageGroup,"position":position}
         else:
-            return False       
+            return False  
         
-    def addRunners(self, text):
+    def parseRunners(self, text):
         text = text.strip()
         if text == '':
             return	
@@ -137,6 +155,8 @@ class RunReport(object):
                     count = self.runners[details['id']]['count'] + 1
                     if details['pb'] == 1:
                         pbCount = self.runners[details['id']]['pbCount'] + 1
+                    else:
+                        pbCount = self.runners[details['id']]['pbCount']
                 else:
                     count = 1
                     if details['pb'] == 1:
@@ -145,7 +165,7 @@ class RunReport(object):
                 self.runners[details['id']] = {"name":details['name'],"pbCount":pbCount,"count":count}
         self.runCount.append(eventCount); 
         
-    def addVolunteers(self, text):  
+    def parseVolunteers(self, text):  
         text = text.strip()
         if text == '':
             return	
@@ -193,10 +213,13 @@ class RunReport(object):
         html = ''
         for key, data in self.currentEventRunners.items():
             time = data['time']
+            # end in :00 or start = end like 21:21
             if time[-2:] == '00' or time[-2:] == time[0:2]:
                 html += time + ' - ' + data['name'] + '<br/>'
+            # e.g. 22:33    
             elif time[0] == time[1] and time[3] == time[4]:
-                html += time + ' - ' + data['name'] + '<br/>'    
+                html += time + ' - ' + data['name'] + '<br/>'  
+            # e.g. 21:12               
             elif time[0] == time[4] and time[1] == time[2]:
                 html += time + ' - ' + data['name'] + '<br/>' 
         
@@ -206,25 +229,30 @@ class RunReport(object):
     def getTableHeaderCellTemplate(self, width, header, colspan=1):
         return self.templates.tableHeaderCellTemplate.format(width, colspan, header)
         
-    def getSummaryTableHTML(self, headers, selectedList):
+    def getSummaryTableHTML(self, headers, selected_list):
         width = 100 // len(headers)
      
         html = self.templates.tableStart 
         html += '<tr>'      
         for header in headers:
-            html += self.getTableHeaderCellTemplate(width, header)
+            html += self.getTableHeaderCellTemplate(width, header, 2)
         html += '</tr>'
         
-        for l,v in selectedList: 
-            html += '<tr>'
+        count = 0;       
+        for l,v in selected_list: 
+            if count % 2 == 0:
+                html += '<tr>'
             html += self.templates.tableCell.format(v['name'])
-            html += '</tr>'
+            if count % 2 == 1:
+                html += '</tr>'
+            count += 1
 
         html += self.templates.tableEnd
         return html
         
     def getPBSummary(self, pbLimit=2):
         events = len(self.runCount)
+
         selected = {k:v for k,v in self.runners.items() if v['pbCount'] >= pbLimit}
         selectedList = sorted(selected.items(), key=lambda x: x[1]['name'])
 		 
@@ -325,7 +353,6 @@ class RunReport(object):
 class RunReportWeek(RunReport):
     
     parkrunWeek = 1
-    options = {'runnerLimit':7, 'volunteerLimit':2, 'pbLimit':2, 'eventNumber':8}
     runReportHTML = ''	
     
     def __init__(self, name, eventNumber, week, options):
