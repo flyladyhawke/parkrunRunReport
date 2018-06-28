@@ -1,15 +1,5 @@
 class StandardTemplate:
 
-    sectionHeadingTemplate = '''<div style="border: 1px solid #ccc; padding: 5px; text-align: center;">
-<h3 style="padding: 0; margin: 0;"><a name="{}"></a>{}</h3>
-</div>
-'''
-    sectionContentTemplate = '''<div style="border: 1px solid #ccc; padding: 5px;">
-<p style="padding: 0; margin: 0;">{}</p>
-</div>
-'''
-    separator = '<div style="height: 10px;"></div>'
-    
     tableStart = '<table style="width: 100%; padding: 0; border-collapse: collapse;" cellspacing="0" cellpadding="0"><tbody>'
     
     tableHeader =  '''<tr>
@@ -31,7 +21,7 @@ class StandardTemplate:
     tableEnd = '</tbody></table>' 
     
     summaryThanks = 'Thanks to everyone for their participation and we hope to see everyone again next week. Remember to tell your friends parkrun is fun for everyone, it’s the taking part that counts.'
-	
+
     volunteerText = '''
 Jells parkrun relies on volunteers to bring you a free, timed event each week. We encourage everyone to volunteer because it's fun, rewarding, and giving to your community. 
 Please review the <a href="https://www.parkrun.com.au/jells/volunteer/futureroster/">Future Roster</a> to see where volunteers are needed and email <a href="mailto:jellshelpers@parkrun.com">jellshelpers@parkrun.com</a> 

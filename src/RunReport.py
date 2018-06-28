@@ -1,15 +1,20 @@
 from bs4 import BeautifulSoup
 import re
 import src.RunReportTemplates as reportTemplates
+from jinja2 import Environment, FileSystemLoader
+
 
 class RunReport(object):  
     templates = False
     parkrun_name = ''
     parkrun_event_number = ''
-    options = {'runner_limit':7, 'volunteer_limit':2, 'pb_limit':2, 'event_limit':8}
+    options = {'runner_limit':7, 'volunteer_limit':2, 'pb_limit':2, 'number_event_urls':8}
+
+    templates = False
+    template_loader = False
+    template_env = False
     
     results_system_text = ''
-    templates = False
     current_event_volunteers = []
     current_event_runners = {}
     photos = []
@@ -27,6 +32,9 @@ class RunReport(object):
         self.templates = reportTemplates.StandardTemplate()   
         self.parkrun_name = name
         self.parkrun_event_number = event_number
+
+        self.template_loader = FileSystemLoader(searchpath="templates/")
+        self.template_env = Environment(loader=self.template_loader)
   
         # make sure these are reset each time you call the init
         self.runners = {}
@@ -84,20 +92,6 @@ class RunReport(object):
         names = self.parse_current_event(text, 'volunteers')
         for n in names:
             self.current_event_volunteers.append(n)
-        
-    def add_toc(self, anchor, heading):
-        # Add to toc
-        self.toc.append('<li><a href="#'+anchor+'">'+heading+'</a></li>')      
-        
-    def get_section_heading(self, anchor, heading):
-        self.add_toc(anchor, heading)
-        return self.templates.sectionHeadingTemplate.format(anchor, heading)    
-    
-    def get_section_content(self, content):
-        return self.templates.sectionContentTemplate.format(content)    
-    
-    def get_section_separator(self):
-        return self.templates.separator    
     
     def get_current_event_volunteer_html(self):
         html = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
@@ -222,8 +216,7 @@ class RunReport(object):
             # e.g. 21:12               
             elif time[0] == time[4] and time[1] == time[2]:
                 html += time + ' - ' + data['name'] + '<br/>' 
-        
-        html = self.get_section_content(html)
+
         return html 
 
     def get_table_header_cell_template(self, width, header, colspan=1):
@@ -231,8 +224,19 @@ class RunReport(object):
         
     def get_summary_table_html(self, headers, selected_list):
         width = 100 // len(headers)
+
+        header_details = []
+        for header in headers:
+            header_details.append({'width':width, 'header':header, 'colspan':2})
+
+        data = []
+        for l, v in selected_list:
+            data.append([v['name']])
+
+        template = self.template_env.get_template("table.html")
+        outputText = template.render({'headers':headers, 'data':data})
      
-        html = self.templates.tableStart 
+        html = self.templates.tableStart
         html += '<tr>'      
         for header in headers:
             html += self.get_table_header_cell_template(width, header, 2)
@@ -248,7 +252,7 @@ class RunReport(object):
             count += 1
 
         html += self.templates.tableEnd
-        return html
+        return outputText
         
     def get_pb_summary(self, pbLimit=2):
         events = len(self.runCount)
@@ -259,7 +263,7 @@ class RunReport(object):
         headers = []
         headers.append(self.templates.tableHeaderCellSummaryTemplate.format('PBs', pbLimit, events))
 
-        html = self.get_summary_table_html(headers, selected_list)       
+        html = self.get_summary_table_html(headers, selected_list)
 
         return html	
         
@@ -355,6 +359,7 @@ class RunReportWeek(RunReport):
     
     parkrun_week = 1
     run_report_html = ''
+    sections = []
     
     def __init__(self, name, event_number, week, options):
         RunReport.__init__(self, name, event_number)
@@ -375,7 +380,7 @@ class RunReportWeek(RunReport):
         links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
         
         if self.parkrun_week == 2 or self.parkrun_week == 3:
-             for i in range(1, self.options['event_number']):
+             for i in range(1, self.options['number_event_urls']):
                 event_number = str(self.parkrun_event_number - i)
                 links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
           
@@ -384,6 +389,8 @@ class RunReportWeek(RunReport):
         print("\n".join(links))
 
     def create_week(self, week=False, options=False):
+        self.sections = []
+
         self.add_summary_section()
         self.add_upcoming_section()
         self.add_volunteer_section()
@@ -408,12 +415,15 @@ class RunReportWeek(RunReport):
             
         self.add_times_section()
         self.add_photo_section()
+
+        args = {'sections':self.sections, 'toc':self.toc}
+        template = self.template_env.get_template("base.html")
     
-        return self.get_full_run_report_html()
+        return template.render(args)
 
     def add_summary_section(self):
         text = self.results_system_text
-        html = self.get_section_heading('summary', 'Summary')
+
         content = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
         
         # get text until first .
@@ -426,80 +436,120 @@ class RunReportWeek(RunReport):
         content += '<li>'+text[pos+1:].strip()+'</li>'
         
         content += '</ul>'
-        content += self.templates.summaryThanks       
-        html += self.get_section_content(content)
-        html += self.get_section_separator()
-        self.run_report_html += html
+        content += self.templates.summaryThanks
+
+        section = {
+            'heading':'Summary',
+            'anchor':'summary',
+            'content':content,
+            'separator': True
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'],'anchor': section['anchor']})
     
     def add_upcoming_section(self):
-        html = self.get_section_heading('upcoming', 'Upcoming')
         content = self.templates.upcomingText;
-        html += self.get_section_content(self.templates.upcomingText)
-        html += self.get_section_separator()
-        self.run_report_html += html
+        section = {
+            'heading':'Upcoming',
+            'anchor':'upcoming',
+            'content':content,
+            'separator':True
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
 
     def add_milestone_section(self):
-        # TODO only Add if there are any milestones
-        html = self.get_section_heading('milestone', 'Milestones')
-        html += self.get_photo_links('milestone')
-        html += self.get_section_separator()
-        self.run_report_html += html
+        # TODO only add if there are any milestones
+        content = ''
+        photo_links = self.get_photo_links('milestone')
+        section = {
+            'heading': 'Milestones',
+            'anchor': 'milestone',
+            'content': content,
+            'photos': photo_links,
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_volunteer_section(self):
-        html = self.get_section_heading('volunteers', 'Volunteers')
         content = self.templates.volunteerText
         content += self.get_current_event_volunteer_html()
-        html += self.get_section_content(content)
-        html += self.get_photo_links('volunteer')
-        html += self.get_section_separator()
-        self.run_report_html += html
+        photo_links = self.get_photo_links('volunteer')
+        section = {
+            'heading': 'Volunteers',
+            'anchor': 'volunteers',
+            'content': content,
+            'photos': photo_links,
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
     
     def add_age_group_section(self):
-        html = self.get_section_heading('age_group', 'Age Group First Finishers')
-        html += self.get_age_group_finisher()
-        self.run_report_html += html
+        content = self.get_age_group_finisher()
+        section = {
+            'heading': 'Age Group First Finishers',
+            'anchor': 'age_group',
+            'content': content
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_regular_section(self, runner_limit=7, volunteer_limit=2):
-        html = self.get_section_heading('regular', 'Regular Runners / Volunteers')
-        html += self.get_regular_summary(runner_limit, volunteer_limit)
-        self.run_report_html += html
+        content = self.get_regular_summary(runner_limit, volunteer_limit)
+        section = {
+            'heading': 'Regular Runners / Volunteers',
+            'anchor': 'regular',
+            'content': content
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_week_pb_section(self, pbLimit=2):
-        html = self.get_section_heading('pbs', 'Regular PBs')
-        html += self.get_pb_summary(pbLimit)
-        self.run_report_html += html
+        content = self.get_pb_summary(pbLimit)
+        section = {
+            'heading': 'Regular PBs',
+            'anchor': 'pbs',
+            'content': content
+        }
+
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
             
     def add_community_section(self):
-        html = self.get_section_heading('fun', 'Having Fun')
-        self.run_report_html += html
+        content = ''
+        section = {
+            'heading': 'Having Fun',
+            'anchor': 'fun',
+            'content': content
+        }
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_times_section(self):
-        html = self.get_section_heading('times', 'Aesthetically pleasing times')
-        html += self.get_aesthetic_times()
-        html += self.get_section_separator()
-        self.run_report_html += html
+        content = self.get_aesthetic_times()
+        section = {
+            'heading': 'Aesthetically pleasing times',
+            'anchor': 'times',
+            'content': content,
+            'separator': True
+        }
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
             
     def add_photo_section(self):
-        html = self.get_section_heading('photos', 'Photos')
-        html += self.get_photo_links('photo')
-        self.run_report_html += html
-        
-    def get_run_report_header(self):
-        return '<h1 style="padding: 0;margin: 0">Run Report</h1>'
-        
-    def get_run_report_toc(self):
-        html = '<ul>'
-        for toc in self.toc:
-           html += toc
-        html += '</ul>'
-        
-        return html    
-        
-    def get_full_run_report_html(self):
-        html = self.get_run_report_header()
-        html += self.get_run_report_toc()
-        html += self.run_report_html
-        
-        return html
-                
- 
+        content = ''
+        photo_links = self.get_photo_links('photo')
+        section = {
+            'heading': 'Aesthetically pleasing times',
+            'anchor': 'times',
+            'content': content,
+            'photos': photo_links
+        }
+        self.sections.append(section)
+        self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
