@@ -46,6 +46,12 @@ class RunReport(object):
             return	
         self.results_system_text = text
 
+    def reset_event_result(self):
+        self.current_event_volunteers = []
+        self.current_event_runners = {}
+        self.runners = {}
+        self.volunteers = {}
+
     def parse_event_result(self, text, is_current=False):
         text = text.strip()
         if text == '':
@@ -170,7 +176,10 @@ class RunReport(object):
                 count = self.volunteers[n] + 1
             else:
                 count = 1
-            self.volunteers[n] = count            
+            self.volunteers[n] = count
+
+    def reset_photos(self):
+        self.photos = []
             
     def add_photo(self, text, size, photo_type, title=''):
         text = text.strip()
@@ -546,8 +555,8 @@ class RunReportWeek(RunReport):
         content = ''
         photo_links = self.get_photo_links('photo')
         section = {
-            'heading': 'Aesthetically pleasing times',
-            'anchor': 'times',
+            'heading': 'Photos',
+            'anchor': 'photos',
             'content': content,
             'photos': photo_links
         }
