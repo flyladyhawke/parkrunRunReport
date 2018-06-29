@@ -1,0 +1,17 @@
+<h1 style="padding: 0;margin: 0">Run Report</h1>
+<ul>
+{% for item in toc %}
+<li><a href="#{{item.anchor}}">{{item.heading}}</a></li>
+{% endfor %}
+</ul>
+{% for item in sections %}
+<div style="border: 1px solid #ccc; padding: 5px; text-align: center;">
+<h3 style="padding: 0; margin: 0;"><a name="{{item.anchor}}"></a>{{item.heading}}</h3>
+</div>
+<div style="border: 1px solid #ccc; padding: 5px;"><p style="padding: 0; margin: 0;">
+<div id="content">{{item.content}}</div>
+</p></div>
+{% if item.separator %}
+<div style="height: 10px;"></div>
+{% endif %}
+{% endfor %}

@@ -1,0 +1,16 @@
+<table style="width: 100%; padding: 0; border-collapse: collapse;" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+    {% for header in headers %}
+<th style="width:{{header.width}}%; text-align: center; border: 1px solid #ccc !important;" colspan="{{header.colspan}}">{{header.text}}</th>
+    {% endfor %}
+</tr>
+{% for row in data %}
+    <tr>
+    {% for column in row %}
+        <td style="padding-left: 10px; border-width: 0 0 1px 0 !important; border-style: solid  !important; border-color: #ccc !important;">{{column}}</td>
+    {% endfor %}
+    </tr>
+{% endfor %}
+</tbody>
+</table>
