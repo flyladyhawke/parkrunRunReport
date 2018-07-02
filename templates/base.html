@@ -8,9 +8,37 @@
 <div style="border: 1px solid #ccc; padding: 5px; text-align: center;">
 <h3 style="padding: 0; margin: 0;"><a name="{{item.anchor}}"></a>{{item.heading}}</h3>
 </div>
+{% if item.content %}
 <div style="border: 1px solid #ccc; padding: 5px;"><p style="padding: 0; margin: 0;">
 <div id="content">{{item.content}}</div>
 </p></div>
+{% endif %}
+{% if item.summary_data %}
+<table style="width: 100%; padding: 0; border-collapse: collapse;" cellspacing="0" cellpadding="0">
+<tbody>
+<tr>
+    {% for header in item.summary_data.headers %}
+<th style="width:{{header.width}}%; text-align: center; border: 1px solid #ccc !important;" colspan="{{header.colspan}}">
+{% if header.text %}
+    {{header.text}}
+{% else %}
+    {{header.type}} ({{header.limit}} or more from last {{header.events}} events)
+{% endif %}
+</th>
+    {% endfor %}
+</tr>
+{% for row in item.summary_data.data %}
+<tr>{% for column in row %}<td style="padding-left: 10px; border-width: 0 0 1px 0 !important; border-style: solid  !important; border-color: #ccc !important;">{{column}}</td>{% endfor %}</tr>
+{% endfor %}
+</tbody>
+</table>
+{% endif %}
+{% if item.photos %}
+{# TODO add &nbsp; between pictures if portrait and odd count #}
+{% for photo in item.photos %}
+    <img src="{{photo.link}}" alt="{{photo.alt}}" width="{{photo.width}}" height="{{photo.height}}"/>{{photo.text}}
+{% endfor %}
+{% endif %}
 {% if item.separator %}
 <div style="height: 10px;"></div>
 {% endif %}
