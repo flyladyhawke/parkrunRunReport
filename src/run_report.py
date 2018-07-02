@@ -25,7 +25,8 @@ class RunReport(object):
     toc = []
     
     VOLUNTEER_START_TEXT = 'We are very grateful to the volunteers who made this event happen:'
-    PB_TEXT = 'New PB!'  
+    PB_TEXT = 'New PB!'
+    RESULT_SYSTEM_START_TEXT = 'This week'
 
     def __init__(self, name, event_number):
         self.templates = reportTemplates.StandardTemplate()   
@@ -378,7 +379,7 @@ class RunReportWeek(RunReport):
         content = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
         
         # get text until first .
-        content += '<li>'+text[:text.find('.')+1]+'</li>'
+        content += '<li>'+text[text.find(self.RESULT_SYSTEM_START_TEXT):text.find('.')+1]+'</li>'
         
         # get text from third last . (with white space at start trimmed) 
         pos = text.rfind('.')
@@ -400,80 +401,71 @@ class RunReportWeek(RunReport):
         self.toc.append({'heading': section['heading'],'anchor': section['anchor']})
     
     def add_upcoming_section(self):
-        content = self.templates.upcoming_text;
         section = {
             'heading':'Upcoming',
             'anchor':'upcoming',
-            'content':content,
+            'content':self.templates.upcoming_text,
             'separator':True
         }
-
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
 
     def add_milestone_section(self):
-        # TODO only add if there are any milestones
-        content = ''
+        # Only add if there are any milestones
         photo_links = self.get_photo_links('milestone')
+        if len(photo_links) == 0:
+            return
+
         section = {
             'heading': 'Milestones',
             'anchor': 'milestone',
-            'content': content,
             'photos': photo_links,
         }
-
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_volunteer_section(self):
         content = self.templates.volunteer_text
         content += self.get_current_event_volunteer_html()
-        photo_links = self.get_photo_links('volunteer')
         section = {
             'heading': 'Volunteers',
             'anchor': 'volunteers',
             'content': content,
             'separator': True,
-            'photos': photo_links,
+            'photos': self.get_photo_links('volunteer')
         }
-
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
     
     def add_age_group_section(self):
-        content = self.get_age_group_finisher_summary()
         section = {
             'heading': 'Age Group First Finishers',
             'anchor': 'age_group',
-            'summary_data': content
+            'summary_data': self.get_age_group_finisher_summary()
         }
-
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_regular_section(self, runner_limit=7, volunteer_limit=2):
-        content = self.get_regular_summary(runner_limit, volunteer_limit)
         section = {
             'heading': 'Regular Runners / Volunteers',
             'anchor': 'regular',
-            'summary_data': content
+            'summary_data': self.get_regular_summary(runner_limit, volunteer_limit)
         }
-
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_week_pb_section(self, pb_limit=2):
-        content = self.get_pb_summary(pb_limit)
         section = {
             'heading': 'Regular PBs',
             'anchor': 'pbs',
-            'summary_data': content
+            'summary_data': self.get_pb_summary(pb_limit)
         }
-
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
             
     def add_community_section(self):
+        # TODO work out what to do here
         content = ''
         section = {
             'heading': 'Having Fun',
@@ -484,24 +476,20 @@ class RunReportWeek(RunReport):
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_times_section(self):
-        content = self.get_aesthetic_times()
         section = {
             'heading': 'Aesthetically pleasing times',
             'anchor': 'times',
-            'content': content,
+            'content': self.get_aesthetic_times(),
             'separator': True
         }
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
             
     def add_photo_section(self):
-        content = ''
-        photo_links = self.get_photo_links('photo')
         section = {
             'heading': 'Photos',
             'anchor': 'photos',
-            'content': content,
-            'photos': photo_links
+            'photos': self.get_photo_links('photo')
         }
         self.sections.append(section)
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
