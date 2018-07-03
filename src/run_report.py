@@ -1,14 +1,29 @@
 from bs4 import BeautifulSoup
 from re import compile
 from itertools import zip_longest
-import src.RunReportTemplates as reportTemplates
+import src.run_report_templates as report_templates
 from jinja2 import Environment, FileSystemLoader
+
+
+class RunReportUtils:
+
+    # TODO move to utils
+    @staticmethod
+    def get_sections(seq, num):
+        out = []
+        last = 0.0
+
+        while last < len(seq):
+            out.append(seq[int(last):int(last + num)])
+            last += num
+
+        return out
 
 
 class RunReport(object):
     parkrun_name = ''
     parkrun_event_number = ''
-    options = {'runner_limit':7, 'volunteer_limit':2, 'pb_limit':2, 'number_event_urls':8}
+    options = {'runner_limit': 7, 'volunteer_limit': 2, 'pb_limit': 2, 'number_event_urls': 8}
 
     templates = False
     template_loader = False
@@ -29,12 +44,14 @@ class RunReport(object):
     RESULT_SYSTEM_START_TEXT = 'This week'
 
     def __init__(self, name, event_number):
-        self.templates = reportTemplates.StandardTemplate()   
+        self.templates = report_templates.StandardTemplate()
         self.parkrun_name = name
         self.parkrun_event_number = event_number
 
         self.template_loader = FileSystemLoader(searchpath="templates/")
         self.template_env = Environment(loader=self.template_loader)
+        self.template_env.trim_blocks = True
+        self.template_env.lstrip_blocks = True
   
         # make sure these are reset each time you call the init
         self.runners = {}
@@ -98,13 +115,6 @@ class RunReport(object):
         names = self.parse_current_event(text, 'volunteers')
         for n in names:
             self.current_event_volunteers.append(n)
-    
-    def get_current_event_volunteer_html(self):
-        html = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
-        for vol in self.current_event_volunteers:
-            html += '<li>'+vol+'</li>'
-        html += '</ul>'
-        return html    
            
     def get_runner_details(self, cells):
         # <tr>
@@ -226,32 +236,21 @@ class RunReport(object):
         return photos
         
     def get_aesthetic_times(self):
-        html = ''
+        times_list = []
+
         for key, data in self.current_event_runners.items():
             time = data['time']
             # end in :00 or start = end like 21:21
             if time[-2:] == '00' or time[-2:] == time[0:2]:
-                html += time + ' - ' + data['name'] + '<br/>'
+                times_list.append(time + ' - ' + data['name'])
             # e.g. 22:33    
             elif time[0] == time[1] and time[3] == time[4]:
-                html += time + ' - ' + data['name'] + '<br/>'  
+                times_list.append(time + ' - ' + data['name'])
             # e.g. 21:12               
             elif time[0] == time[4] and time[1] == time[2]:
-                html += time + ' - ' + data['name'] + '<br/>' 
+                times_list.append(time + ' - ' + data['name'])
 
-        return html
-
-    # TODO move to utils
-    @staticmethod
-    def get_sections(seq, num):
-        out = []
-        last = 0.0
-
-        while last < len(seq):
-            out.append(seq[int(last):int(last + num)])
-            last += num
-
-        return out
+        return times_list
         
     def calc_age_groups(self):
         runners = self.current_event_runners
@@ -315,7 +314,7 @@ class RunReport(object):
         if data_columns == 1:
             data = summary_data
         else:
-            data = RunReportWeek.get_sections(summary_data, data_columns)
+            data = RunReportUtils.get_sections(summary_data, data_columns)
 
         return {'headers': headers, 'data': data}
 
@@ -390,24 +389,22 @@ class RunReportWeek(RunReport):
     def add_summary_section(self):
         text = self.results_system_text
 
-        content = '<ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">'
-        
-        # get text until first .
-        content += '<li>'+text[text.find(self.RESULT_SYSTEM_START_TEXT):text.find('.')+1]+'</li>'
-        
-        # get text from third last . (with white space at start trimmed) 
+        # get text from third last . (with white space at start trimmed)
         pos = text.rfind('.')
         pos = text.rfind('.', 0, pos)
         pos = text.rfind('.', 0, pos)
-        content += '<li>'+text[pos+1:].strip()+'</li>'
-        
-        content += '</ul>'
-        content += self.templates.summary_thanks
 
         section = {
             'heading': 'Summary',
             'anchor': 'summary',
-            'content': content,
+            'content': {
+                'start': '',
+                'list': [
+                    text[text.find(self.RESULT_SYSTEM_START_TEXT):text.find('.') + 1],
+                    text[pos + 1:].strip()
+                ],
+                'end': self.templates.summary_thanks
+            },
             'separator': True
         }
 
@@ -439,12 +436,13 @@ class RunReportWeek(RunReport):
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
         
     def add_volunteer_section(self):
-        content = self.templates.volunteer_text
-        content += self.get_current_event_volunteer_html()
         section = {
             'heading': 'Volunteers',
             'anchor': 'volunteers',
-            'content': content,
+            'content': {
+                'start': self.templates.volunteer_text,
+                'list':  self.current_event_volunteers,
+            },
             'separator': True,
             'photos': self.get_photo_links('volunteer')
         }
@@ -493,7 +491,9 @@ class RunReportWeek(RunReport):
         section = {
             'heading': 'Aesthetically pleasing times',
             'anchor': 'times',
-            'content': self.get_aesthetic_times(),
+            'content': {
+                'list': self.get_aesthetic_times(),
+            },
             'separator': True
         }
         self.sections.append(section)
