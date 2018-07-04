@@ -325,17 +325,13 @@ class RunReportWeek(RunReport):
     run_report_html = ''
     sections = []
     
-    def __init__(self, name, event_number, week, options):
-        RunReport.__init__(self, name, event_number)
-        self.parkrun_week = week
-        # merge options
-        self.options = {**self.options, **options}
+    def __init__(self, name, event_number):
+        RunReport.__init__(self, name, event_number)        
         
-        self.print_urls()
-        
-    def print_urls(self):
+    def print_urls(self, week, number_event_urls):
         links = []
-        event_number = str(self.parkrun_event_number)
+        self.parkrun_week = week
+        event_number = str(self.parkrun_event_number)       
         links.append('tag: ' + self.parkrun_name + '_parkrun_' + event_number)
         links.append('tag: ' + self.parkrun_name)
         links.append('tag: parkrun')
@@ -343,8 +339,8 @@ class RunReportWeek(RunReport):
         links.append('https://www.flickr.com/groups/' + self.parkrun_name + '-parkrun/')
         links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
         
-        if self.parkrun_week == 2 or self.parkrun_week == 3:
-             for i in range(1, self.options['number_event_urls']):
+        if week == 2 or week == 3:
+             for i in range(1, number_event_urls):
                 event_number = str(self.parkrun_event_number - i)
                 links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
           
