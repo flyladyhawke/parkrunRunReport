@@ -87,14 +87,15 @@ class RunReport(object):
         self.set_current_event_volunteers(text)
             
     def parse_current_event(self, text, parse_type):
-        soup = BeautifulSoup(text,'html.parser')		
+        soup = BeautifulSoup(text, 'html.parser')
         if parse_type == 'runners':
             # get every row from the result table
             rows = soup.find(id="results").find("tbody").find_all("tr")
         elif parse_type == 'volunteers':
             # <p class="paddedb">
             # We are very grateful to the volunteers who made this event happen:
-            # Aaryan BHATIA, Naomi (Tullae) CROTTY, Darren JEFFREYS, Gregory MOORE, Sadia NAZIER, Jenny PATERSON, Elijah SUMMERS, Kaila SWYER, Ashley WILLIS, Nathan WRIGHT
+            # Aaryan BHATIA, Naomi (Tullae) CROTTY, Darren JEFFREYS, Gregory MOORE, Sadia NAZIER, Jenny PATERSON,
+            # Elijah SUMMERS, Kaila SWYER, Ashley WILLIS, Nathan WRIGHT
             # </p>  
             start = soup.p.find(text=compile(self.VOLUNTEER_START_TEXT))
             pos = start.find(':')
@@ -108,7 +109,11 @@ class RunReport(object):
         for row in rows:
             details = self.get_runner_details(row.find_all("td"))
             if details:
-                self.current_event_runners[details['id']] = {"name": details['name'], "time": details['time'], "age_group": details['age_group']}
+                self.current_event_runners[details['id']] = {
+                    "name": details['name'],
+                    "time": details['time'],
+                    "age_group": details['age_group']
+                }
                 
     def set_current_event_volunteers(self, text):
         self.current_event_volunteers = []
@@ -229,7 +234,7 @@ class RunReport(object):
                 photos.append({
                     'link': p['link'],
                     'alt': p['type'],
-                    'width':dims[0],
+                    'width': dims[0],
                     'height': dims[1],
                     'title': p['title']
                 })
@@ -284,7 +289,7 @@ class RunReport(object):
         for l, v in summary_data:
             data.append([l, v['menName'], v['menTime'], v['womenName'], v['womenTime']])
 
-        return {'headers':headers, 'data':data}
+        return {'headers': headers, 'data': data}
         
     def get_regular_summary(self, runner_limit, volunteer_limit):
         events = len(self.event_result_count)
@@ -301,10 +306,10 @@ class RunReport(object):
         volunteer_names = sorted(regular_volunteer)
         # display as two columns, one for runners, one for volunteers, and they will probably be different lengths
         # so need to transpose the data
-        combined = [runners_names,volunteer_names]
+        combined = [runners_names, volunteer_names]
         data = list(zip_longest(*combined, fillvalue=''))
 
-        return {'headers':headers, 'data':data}
+        return {'headers': headers, 'data': data}
 
     def get_pb_summary(self, pb_limit=2, data_columns=2):
         events = len(self.event_result_count)
@@ -337,12 +342,16 @@ class RunReportWeek(RunReport):
         links.append('tag: parkrun')
         links.append('https://www.flickr.com/groups_pool_add.gne?path=' + self.parkrun_name + '-parkrun')
         links.append('https://www.flickr.com/groups/' + self.parkrun_name + '-parkrun/')
-        links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
+        links.append('http://www.parkrun.com.au/'
+                     + self.parkrun_name + '/results/weeklyresults/?runSeqNumber='
+                     + event_number)
         
         if week == 2 or week == 3:
              for i in range(1, number_event_urls):
                 event_number = str(self.parkrun_event_number - i)
-                links.append('http://www.parkrun.com.au/' + self.parkrun_name + '/results/weeklyresults/?runSeqNumber=' + event_number)
+                links.append('http://www.parkrun.com.au/'
+                             + self.parkrun_name + '/results/weeklyresults/?runSeqNumber='
+                             + event_number)
           
         # TODO display as html  
         print('Links to use in the below sections')
