@@ -7,7 +7,6 @@ from jinja2 import Environment, FileSystemLoader
 
 class RunReportUtils:
 
-    # TODO move to utils
     @staticmethod
     def get_sections(seq, num):
         out = []
@@ -19,11 +18,23 @@ class RunReportUtils:
 
         return out
 
+    @staticmethod
+    def chunks(seq, chunk_size):
+        """Yield successive chunkSize-sized chunks from list."""
+        for i in range(0, len(seq), chunk_size):
+            yield seq[i:i + chunk_size]
+
 
 class RunReport(object):
     parkrun_name = ''
     parkrun_event_number = ''
-    options = {'runner_limit': 7, 'volunteer_limit': 2, 'pb_limit': 2, 'number_event_urls': 8}
+    options = {
+        'template_name': 'base',
+        'runner_limit': 7,
+        'volunteer_limit': 2,
+        'pb_limit': 2,
+        'number_event_urls': 8
+    }
 
     templates = False
     template_loader = False
@@ -88,6 +99,7 @@ class RunReport(object):
             
     def parse_current_event(self, text, parse_type):
         soup = BeautifulSoup(text, 'html.parser')
+        rows = []
         if parse_type == 'runners':
             # get every row from the result table
             rows = soup.find(id="results").find("tbody").find_all("tr")
@@ -247,34 +259,34 @@ class RunReport(object):
             time = data['time']
             # end in :00 or start = end like 21:21
             if time[-2:] == '00' or time[-2:] == time[0:2]:
-                times_list.append(time + ' - ' + data['name'])
+                times_list.append(str(time) + ' - ' + data['name'])
             # e.g. 22:33    
             elif time[0] == time[1] and time[3] == time[4]:
-                times_list.append(time + ' - ' + data['name'])
+                times_list.append(str(time) + ' - ' + data['name'])
             # e.g. 21:12               
             elif time[0] == time[4] and time[1] == time[2]:
-                times_list.append(time + ' - ' + data['name'])
+                times_list.append(str(time) + ' - ' + data['name'])
 
         return times_list
-        
+
     def calc_age_groups(self):
         runners = self.current_event_runners
         age_group = {}
+        # results are sorted by position number, so first found for each age group is the fastest
         for l, v in runners.items():
             age = v['age_group']
             age_number = age[2:]
+            details = {'name': v['name'], 'time': v['time']}
             if age[0:2] == 'SM' or age[0:2] == 'VM':
                 if age_number not in age_group:
-                    age_group[age_number] = {'menName': '', 'menTime': '', 'womenName': '', 'womenTime': ''}
-                if age_group[age_number]['menName'] == '':
-                    age_group[age_number]['menName'] = v['name']
-                    age_group[age_number]['menTime'] = v['time']
+                    age_group[age_number] = {'man': details, 'woman': {'name': '', 'time': ''}}
+                elif age_group[age_number]['man']['name'] == '':
+                    age_group[age_number]['man'] = details
             elif age[0:2] == 'SW' or age[0:2] == 'VW':
                 if age_number not in age_group:
-                    age_group[age_number] = {'menName': '', 'menTime': '', 'womenName': '', 'womenTime': ''}
-                if age_group[age_number]['womenName'] == '':
-                    age_group[age_number]['womenName'] = v['name']
-                    age_group[age_number]['womenTime'] = v['time']
+                    age_group[age_number] = { 'man': {'name': '', 'time': ''}, 'woman': details}
+                elif age_group[age_number]['woman']['name'] == '':
+                    age_group[age_number]['woman'] = details
         sorted_age = sorted(age_group.items(), key=lambda x: x[0])
         return sorted_age
         
@@ -287,7 +299,7 @@ class RunReport(object):
         summary_data = self.calc_age_groups()
         data = []
         for l, v in summary_data:
-            data.append([l, v['menName'], v['menTime'], v['womenName'], v['womenTime']])
+            data.append([l, v['man']['name'], v['man']['time'], v['woman']['name'], v['woman']['time']])
 
         return {'headers': headers, 'data': data}
         
@@ -319,7 +331,8 @@ class RunReport(object):
         if data_columns == 1:
             data = summary_data
         else:
-            data = RunReportUtils.get_sections(summary_data, data_columns)
+            # create list of data_columns size lists so the data can be multiple columns
+            data = list(RunReportUtils.chunks(summary_data, data_columns))
 
         return {'headers': headers, 'data': data}
 
@@ -347,7 +360,7 @@ class RunReportWeek(RunReport):
                      + event_number)
         
         if week == 2 or week == 3:
-             for i in range(1, number_event_urls):
+            for i in range(1, number_event_urls):
                 event_number = str(self.parkrun_event_number - i)
                 links.append('http://www.parkrun.com.au/'
                              + self.parkrun_name + '/results/weeklyresults/?runSeqNumber='
@@ -387,7 +400,7 @@ class RunReportWeek(RunReport):
         self.add_photo_section()
 
         args = {'sections': self.sections, 'toc': self.toc}
-        template = self.template_env.get_template("base.html")
+        template = self.template_env.get_template(self.options['template_name'] + ".html")
     
         return template.render(args)
 
