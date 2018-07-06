@@ -284,7 +284,7 @@ class RunReport(object):
                     age_group[age_number]['man'] = details
             elif age[0:2] == 'SW' or age[0:2] == 'VW':
                 if age_number not in age_group:
-                    age_group[age_number] = { 'man': {'name': '', 'time': ''}, 'woman': details}
+                    age_group[age_number] = {'man': {'name': '', 'time': ''}, 'woman': details}
                 elif age_group[age_number]['woman']['name'] == '':
                     age_group[age_number]['woman'] = details
         sorted_age = sorted(age_group.items(), key=lambda x: x[0])
@@ -366,9 +366,9 @@ class RunReportWeek(RunReport):
                              + self.parkrun_name + '/results/weeklyresults/?runSeqNumber='
                              + event_number)
           
-        # TODO display as html  
-        print('Links to use in the below sections')
-        print("\n".join(links))
+        # display as html (works correctly in browser, but not in pycharm notebook view)
+        template = self.template_env.get_template("links.html")
+        return template.render({'links': links})
 
     def create_week(self, week=False, options=False):
         self.sections = []
