@@ -24,6 +24,13 @@ class RunReportUtils:
         for i in range(0, len(seq), chunk_size):
             yield seq[i:i + chunk_size]
 
+    @staticmethod
+    def reverse_find(haystack, needle, n):
+        pos = len(haystack)
+        for i in range(0, n):
+            pos = haystack.rfind(needle, 0, pos)
+        return pos
+
 
 class RunReport(object):
     parkrun_name = ''
@@ -71,7 +78,10 @@ class RunReport(object):
     def set_results_system(self, text):
         text = text.strip()
         if text == '':
-            return	
+            return
+        if len(text) > 3000:
+            print("String is too long\nAre you sure you copied from the results system?")
+            return
         self.results_system_text = text
 
     def reset_event_result(self):
@@ -198,13 +208,18 @@ class RunReport(object):
 
                 self.runners[details['id']] = {"name": details['name'], "pb_count": pb_count, "count": count}
         self.event_result_count.append(event_count)
+        # display number of runners as you parse each event result
+        # this is to indicate to the user that something is happening
+        # and as a visual guide that they can see the the totals, and double check data if duplicate numbers
+        # i.e. they didn't accidentally copy and paste from the same event twice
+        print('Event with '+str(event_count)+' known runners added')
         
     def parse_volunteers(self, text):
         text = text.strip()
         if text == '':
-            return	
+            return
+
         names = self.parse_current_event(text, 'volunteers')
-        
         for n in names:
             if n in self.volunteers:
                 count = self.volunteers[n] + 1
@@ -406,11 +421,9 @@ class RunReportWeek(RunReport):
 
     def add_summary_section(self):
         text = self.results_system_text
-
-        # get text from third last . (with white space at start trimmed)
-        pos = text.rfind('.')
-        pos = text.rfind('.', 0, pos)
-        pos = text.rfind('.', 0, pos)
+        # find string position of third last .
+        needle = '.'
+        pos = RunReportUtils.reverse_find(text, needle, 3)
 
         section = {
             'heading': 'Summary',
