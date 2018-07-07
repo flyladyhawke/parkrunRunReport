@@ -10,7 +10,7 @@
 </div>
 {% if section.content %}
 <div style="border: 1px solid #ccc; padding: 5px;"><p style="padding: 0; margin: 0;">
-<div id="content">
+<div>
 {% if section.content.list %}
     {{section.content.start}}
     <ul style="padding-bottom: 0;padding-top: 0;padding-left: 10px;margin-bottom: 0;margin-top: 0;margin-left: 10px">
@@ -42,9 +42,7 @@
 {% for row in section.summary_data.data %}
 <tr>
     {% for column in row %}
-    <td style="padding-left: 10px; border-width: 0 0 1px 0 !important; border-style: solid !important; border-color: #ccc !important;">
-        {{column}}
-    </td>
+    <td style="padding-left: 10px; border-width: 0 0 1px 0 !important; border-style: solid !important; border-color: #ccc !important;">{{column}}</td>
     {% endfor %}
 </tr>
 {% endfor %}
@@ -52,7 +50,7 @@
 </table>
 {% endif %}
 {% if section.photos %}
-{# TODO add &nbsp; between pictures if portrait and odd count #}
+{# TODO add &nbsp; between pictures if portrait and odd count - loop.index is divisibleby 2 #}
 {% for photo in section.photos %}
     <img src="{{photo.link}}" alt="{{photo.alt}}" width="{{photo.width}}" height="{{photo.height}}"/>{{photo.text}}
 {% endfor %}

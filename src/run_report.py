@@ -1,7 +1,6 @@
 from bs4 import BeautifulSoup
 from re import compile
 from itertools import zip_longest
-import src.run_report_templates as report_templates
 from jinja2 import Environment, FileSystemLoader
 
 
@@ -43,7 +42,6 @@ class RunReport(object):
         'number_event_urls': 8
     }
 
-    templates = False
     template_loader = False
     template_env = False
     
@@ -56,13 +54,14 @@ class RunReport(object):
     volunteers = {}
     photos = []
     toc = []
+
+    content_text = {}
     
     VOLUNTEER_START_TEXT = 'We are very grateful to the volunteers who made this event happen:'
     PB_TEXT = 'New PB!'
     RESULT_SYSTEM_START_TEXT = 'This week'
 
     def __init__(self, name, event_number):
-        self.templates = report_templates.StandardTemplate()
         self.parkrun_name = name
         self.parkrun_event_number = event_number
 
@@ -98,7 +97,13 @@ class RunReport(object):
             self.set_current_event(text)
         self.parse_runners(text)
         self.parse_volunteers(text)
-        
+
+    def parse_optional_text(self, text, text_type):
+        text = text.strip()
+        if text == '':
+            return
+        self.content_text[text_type] = text.format(self.parkrun_name)
+
     def set_current_event(self, text):
         text = text.strip()
         if text == '':
@@ -116,8 +121,6 @@ class RunReport(object):
         elif parse_type == 'volunteers':
             # <p class="paddedb">
             # We are very grateful to the volunteers who made this event happen:
-            # Aaryan BHATIA, Naomi (Tullae) CROTTY, Darren JEFFREYS, Gregory MOORE, Sadia NAZIER, Jenny PATERSON,
-            # Elijah SUMMERS, Kaila SWYER, Ashley WILLIS, Nathan WRIGHT
             # </p>  
             start = soup.p.find(text=compile(self.VOLUNTEER_START_TEXT))
             pos = start.find(':')
@@ -434,7 +437,7 @@ class RunReportWeek(RunReport):
                     text[text.find(self.RESULT_SYSTEM_START_TEXT):text.find('.') + 1],
                     text[pos + 1:].strip()
                 ],
-                'end': self.templates.summary_thanks
+                'end': self.content_text['summary'],
             },
             'separator': True
         }
@@ -443,10 +446,14 @@ class RunReportWeek(RunReport):
         self.toc.append({'heading': section['heading'], 'anchor': section['anchor']})
     
     def add_upcoming_section(self):
+        # Only add section if there is upcoming text
+        content = self.content_text['upcoming']
+        if content == '':
+            return
         section = {
             'heading': 'Upcoming',
             'anchor': 'upcoming',
-            'content': self.templates.upcoming_text,
+            'content': self.content_text['upcoming'],
             'separator': True
         }
         self.sections.append(section)
@@ -471,8 +478,8 @@ class RunReportWeek(RunReport):
             'heading': 'Volunteers',
             'anchor': 'volunteers',
             'content': {
-                'start': self.templates.volunteer_text,
-                'list':  self.current_event_volunteers,
+                'start': self.content_text['volunteer'],
+                'list': self.current_event_volunteers,
             },
             'separator': True,
             'photos': self.get_photo_links('volunteer')
