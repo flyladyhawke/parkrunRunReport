@@ -79,7 +79,7 @@ class RunReport(object):
         if text == '':
             return
         if len(text) > 3000:
-            print("String is too long\nAre you sure you copied from the results system?")
+            print("Result System Text is limited to 3000 characters\nAre you sure you copied from the results system?")
             return
         self.results_system_text = text
 
@@ -89,25 +89,31 @@ class RunReport(object):
         self.runners = {}
         self.volunteers = {}
 
-    def parse_event_result(self, text, is_current=False):
+    def parse_event_result(self, is_current=False, text=''):
         text = text.strip()
         if text == '':
-            return	
+            return
+        if len(text) > 500000:
+            print("Event Text is limited to 500,000 characters")
+            return
         if is_current:
             self.set_current_event(text)
         self.parse_runners(text)
         self.parse_volunteers(text)
 
-    def parse_optional_text(self, text, text_type):
+    def parse_optional_text(self, text_type, text):
         text = text.strip()
         if text == '':
+            return
+        if len(text) > 3000:
+            print("Optional Text is limited to 3000 characters")
             return
         self.content_text[text_type] = text.format(self.parkrun_name)
 
     def set_current_event(self, text):
         text = text.strip()
         if text == '':
-            return	
+            return
         # set currentEventRunners and currentEventVolunteers 
         self.set_current_event_runners(text)
         self.set_current_event_volunteers(text)
@@ -233,10 +239,13 @@ class RunReport(object):
     def reset_photos(self):
         self.photos = []
             
-    def add_photo(self, text, size, photo_type, title=''):
+    def add_photo(self, size, photo_type, title='', text=''):
         text = text.strip()
         if text == '':
-            return	
+            return
+        if len(text) > 300:
+            print("Photo Text is limited to 300 characters")
+            return
         start_pos = text.find('[img]') + len('[img]')
         end_pos = text.find('.jpg') + len('.jpg')
         flickr_link = text[start_pos:end_pos]
