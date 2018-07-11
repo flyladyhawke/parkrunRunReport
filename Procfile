@@ -1,1 +1,1 @@
-web: jupyter notebook ParkRunReport.ipynb --ip 127.0.0.1 --port 8888 --port-retries=0
+web: jupyter notebook ParkRunReport.ipynb --ip 0.0.0.0 --port $PORT --port-retries=0
