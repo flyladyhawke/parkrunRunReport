@@ -1,0 +1,7 @@
+{% for item in links %}
+{% if item[0:4] == 'http' %}
+    <a href="{{ item }}" target="_blank">{{ item }}</a><br/>
+{% else %}
+    {{ item }}<br/>
+{% endif %}
+{% endfor %}
