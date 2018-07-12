@@ -1,1 +1,1 @@
-web: jupyter notebook ParkRunReport.ipynb --ip 0.0.0.0 --port $PORT --port-retries=0
+web: jupyter notebook --no-browser --ip=* --port=$PORT /tmp
